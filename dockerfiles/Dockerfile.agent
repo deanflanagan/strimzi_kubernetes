@@ -1,0 +1,60 @@
+FROM ubuntu:latest
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        apt-transport-https \
+        ca-certificates \
+        software-properties-common \
+        gnupg2 \
+        python3 \
+        docker.io \
+        vim \
+        wget \
+        jq \
+        make \
+        golang-go
+
+# For AMD64 / x86_64
+RUN  curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 && chmod +x ./kind &&  mv ./kind /usr/local/bin/kind
+
+# Install kubectl
+RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
+    echo "deb http://mirror.reenigne.net/apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list && \
+    apt-get update && \
+    apt-get install -y kubectl
+
+# Install kustomize
+RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash && \
+    mv kustomize /usr/local/bin/
+
+# Install helm
+RUN curl https://baltocdn.com/helm/signing.asc | apt-key add - && \
+    echo "deb https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list && \
+    apt-get update && \
+    apt-get install -y helm
+
+# Install yq
+RUN wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64.tar.gz && \
+    tar xvf yq_linux_amd64.tar.gz && \
+    chmod +x yq_linux_amd64 && \
+    mv yq_linux_amd64 /usr/local/bin/yq
+
+# Create the main directory
+RUN mkdir /app
+
+# Set the working directory to /app
+WORKDIR /app
+
+RUN useradd -ms /bin/bash appuser && chown -R appuser:appuser /app && usermod -a -G docker appuser
+
+ARG DOCKER_GROUP_ID
+
+RUN gpasswd -a appuser docker
+
+# groupmod -g $DOCKER_GROUP_ID docker && 
+
+USER appuser
+
+CMD ["/bin/bash"]
